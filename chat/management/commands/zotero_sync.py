@@ -16,8 +16,8 @@ class Command(BaseCommand):
     runner = None
 
     def add_arguments(self , parser):
-        parser.add_argument('zotero_user_id' , nargs='+' , help='zotero_user_id')
-        parser.add_argument('zotero_api_key', nargs='+', help='zotero_api_key')
+        parser.add_argument('zotero_user_id' , help='zotero_user_id')
+        parser.add_argument('zotero_api_key', help='zotero_api_key')
         
     def handle(self, **options):
         print(options)
