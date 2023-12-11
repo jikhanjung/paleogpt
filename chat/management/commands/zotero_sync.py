@@ -26,4 +26,5 @@ class Command(BaseCommand):
         zotero_api_key = options['zotero_api_key']
 
         z = ZWrapper(zotero_user_id, zotero_api_key)
+        print("user_id: ", z.zotero_user_id)
         z.build_database()

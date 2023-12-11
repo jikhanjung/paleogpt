@@ -34,6 +34,8 @@ class ZWrapper():
                     print("new_max_version - collection:", new_max_version)
                 if 'parentCollection' in collection['data'] and collection['data']['parentCollection'] != False:
                     parent_colcache = CollectionCache.objects.get_or_create(key=collection['data']['parentCollection'])[0]
+                    parent_colcache.zotero_user_id = self.zotero_user_id
+                    parent_colcache.save()
                     colcache.parent = parent_colcache
                 colcache.save()
 
@@ -104,12 +106,15 @@ class ZWrapper():
             key = collection['data']['key']
             print("collection:", key, collection['data'])
             colcache = CollectionCache.objects.get_or_create(key=key)[0]
+            colcache.zotero_user_id = self.zotero_user_id
             colcache.data = json.dumps(collection['data'])
             colcache.version = int(collection['data']['version'])
             if colcache.version > max_version:
                 max_version = colcache.version
             if 'parentCollection' in collection['data'] and collection['data']['parentCollection'] != False:
                 parent_colcache = CollectionCache.objects.get_or_create(key=collection['data']['parentCollection'])[0]
+                parent_colcache.zotero_user_id = self.zotero_user_id
+                parent_colcache.save()
                 colcache.parent = parent_colcache
             colcache.save()
 
@@ -121,6 +126,7 @@ class ZWrapper():
                 print("  item:", item_key)
                 itemcache = ItemCache.objects.get_or_create(key=item_key)[0]
                 print("    itemcache:", itemcache.key, itemcache.version, item['data']['version'])
+                itemcache.zotero_user_id = self.zotero_user_id
                 itemcache.data = json.dumps(item['data'])
                 itemcache.version = int(item['data']['version'])
                 if itemcache.version > max_version:
@@ -134,7 +140,7 @@ class ZWrapper():
                         parent_item = self.zot.item(item['data']['parentItem'])
                         parent_itemcache.data = json.dumps(parent_item['data'])
                         parent_itemcache.version = int(parent_item['data']['version'])
-                        #parent_itemcache.collection = colcache
+                        parent_itemcache.zotero_user_id = self.zotero_user_id
                         parent_itemcache.save()
                         parent_colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=parent_itemcache)[0]
                         parent_colitemrel.save()
