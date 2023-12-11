@@ -26,4 +26,4 @@ class Command(BaseCommand):
         zotero_api_key = options['zotero_api_key']
 
         z = ZWrapper(zotero_user_id, zotero_api_key)
-        z.pull_database()
+        z.build_database()
