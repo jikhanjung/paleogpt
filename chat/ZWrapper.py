@@ -5,8 +5,8 @@ from .models import CollectionCache, ItemCache, CollectionItemRel, LastVersion
 from decouple import config
 class ZWrapper():
     def __init__(self, zotero_user_id,zotero_api_key ):
-        #zotero_api_key = config("ZOTERO_API_KEY")
-        #zotero_user_id = config("ZOTERO_USER_ID")
+        self.zotero_api_key = zotero_api_key
+        self.zotero_user_id = zotero_user_id
         self.zot = zotero.Zotero(zotero_user_id, 'user', zotero_api_key)
         self._key_list = []
         self._collection_list = []
@@ -15,7 +15,7 @@ class ZWrapper():
         self._zcollection_hash = {}
 
     def pull_database(self):
-        last_version = LastVersion.objects.get_or_create(id=1)[0]
+        last_version = LastVersion.objects.get_or_create(zotero_user_id=self.zotero_user_id)[0]
         new_max_version = prev_max_version = last_version.version
         print("last_version:", prev_max_version)
         collection_list = self.zot.collections(since=prev_max_version)
@@ -26,6 +26,7 @@ class ZWrapper():
             colcache = CollectionCache.objects.get_or_create(key=key)[0]
             print("  colcache:", colcache.key, colcache.version, collection['data']['version'])
             if colcache.version < prev_max_version:
+                colcache.zotero_user_id = self.zotero_user_id
                 colcache.data = json.dumps(collection['data'])
                 colcache.version = int(collection['data']['version'])
                 if colcache.version > new_max_version:
@@ -36,13 +37,14 @@ class ZWrapper():
                     colcache.parent = parent_colcache
                 colcache.save()
 
-        items_list = self.zot.items(since=prev_max_version)
+        items_list = self.zot.items(since=prev_max_version,limit=None)
         print("  item count:", len(items_list))
         for item in items_list:
             item_key = item['data']['key']
             print("  item:", item_key)
             itemcache = ItemCache.objects.get_or_create(key=item_key)[0]
             if itemcache.version < prev_max_version:
+                itemcache.zotero_user_id = self.zotero_user_id
                 itemcache.data = json.dumps(item['data'])
                 itemcache.version = int(item['data']['version'])
                 if itemcache.version > new_max_version:
@@ -53,6 +55,7 @@ class ZWrapper():
                     parent_itemcache = ItemCache.objects.get_or_create(key=item['data']['parentItem'])[0]
                     if( parent_itemcache.version == 0 ):
                         parent_item = self.zot.item(item['data']['parentItem'])
+                        parent_itemcache.zotero_user_id = self.zotero_user_id
                         parent_itemcache.data = json.dumps(parent_item['data'])
                         parent_itemcache.version = int(parent_item['data']['version'])
                         if parent_itemcache.version > new_max_version:
@@ -74,16 +77,20 @@ class ZWrapper():
                             prev_colkey_list.remove(collection_key)
                         colcache = CollectionCache.objects.get_or_create(key=collection_key)[0]
                         colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache)[0]
+                        colitemrel.zotero_user_id = self.zotero_user_id
                         colitemrel.save()
                         if itemcache.parent:
                             parent_colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache.parent)[0]
+                            parent_colitemrel.zotero_user_id = self.zotero_user_id
                             parent_colitemrel.save()
                 for colkey in prev_colkey_list:
                     colcache = CollectionCache.objects.get_or_create(key=colkey)[0]
                     colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache)[0]
+                    colitemrel.zotero_user_id = self.zotero_user_id
                     colitemrel.delete_instance()
         print("new_max_version:", new_max_version)
         last_version.version = new_max_version
+        last_version.zotero_user_id = self.zotero_user_id
         last_version.save()
 
     def build_database(self,collection_key = None):
