@@ -149,6 +149,7 @@ class ZWrapper():
                 print("    itemcache:", itemcache.key, itemcache.version, item['data']['version'])
                 itemcache.save()
                 colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache)[0]
+                colitemrel.zotero_user_id = self.zotero_user_id
                 colitemrel.save()
             colcache.max_item_version = max_item_version
             colcache.save()

@@ -1,0 +1,133 @@
+<!-- templates/chat/chat_index.html -->
+{% extends "base.html" %}
+
+{% block title %}Log In{% endblock %}
+
+{% block content %}
+<h2>Chat Index</h2>
+<h4>{{userobj.username}}</h4>
+<div class="container">
+    <div class="folder-section">
+        <!-- Tree-like structure for folders -->
+        <div class="folder-tree">
+            <!-- Dynamically populated folder tree -->
+        </div>
+        <div class="paper-list">
+            <!-- Dynamically populated list of papers -->
+        </div>
+    </div>
+    <div class="chat-section">
+        <!-- Chat UI -->
+        <div id="chatDisplay"></div>
+        <input type="text" id="messageInput">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+    {% if user_obj %}<a href="{% url 'logout_view' %}">로그아웃</a>{% else %}<a href="{% url 'login' %}">로그인</a>{% endif %}
+</div>
+<script>
+if(window.attachEvent) {
+    window.attachEvent('onload', on_load_function);
+} else {
+    if(window.onload) {
+        var curronload = window.onload;
+        var newonload = function(evt) {
+            curronload(evt);
+            on_load_function(evt);
+        };
+        window.onload = newonload;
+    } else {
+        window.onload = on_load_function;
+    }
+}
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function on_load_function(){
+    // get tree structure from server /chat/collection_tree via ajax
+    fetch("/chat/collection_tree", {
+        method: "GET",
+        headers: {
+            "X-CSRFToken": getCookie("csrftoken"), // Handle CSRF token
+            "Content-Type": "application/json"
+        }
+    }).then(response => response.json())
+    .then(data => {
+        // Update tree with new data
+        updateTree(data);
+    });
+}
+function updateTree(tree_data){
+    console.log(tree_data);
+    for (let i = 0; i < tree_data['children'].length; i++){
+        console.log(tree_data['children'][i]);
+        let folder = tree_data['children'][i];
+        let folderName = folder["name"];
+        let folderId = folder["key"];
+        let folderParent = folder["parent"];
+        let folderChildren = folder["children"];
+        let folderElement = document.createElement("div");
+        folderElement.classList.add("folder");
+        folderElement.setAttribute("id", folderId);
+        folderElement.setAttribute("parent", folderParent);
+        folderElement.setAttribute("onclick", "folderClicked(this)");
+        folderElement.innerHTML = folderName;
+        document.querySelector(".folder-tree").appendChild(folderElement);
+        if (folderChildren.length > 0){
+            updateTree(folder);
+        }
+    }
+}
+function folderClicked(folder){
+    // get folder id from folder element
+    let folderId = folder.getAttribute("id");
+    // get folder name from folder element
+    let folderName = folder.innerHTML;
+    // get folder parent from folder element
+    let folderParent = folder.getAttribute("parent");
+    // get folder children from folder element
+    let folderChildren = folder.getAttribute("children");
+    // get folder papers from server /chat/folder_papers via ajax
+    fetch("/chat/item_list/"+folderId, {
+        method: "GET",
+        headers: {
+            "X-CSRFToken": getCookie("csrftoken"), // Handle CSRF token
+            "Content-Type": "application/json"
+        },
+    }).then(response => response.json())
+    .then(data => {
+        // Update paper list with new data
+        updatePaperList(data);
+    });
+}
+function updatePaperList(paper_data){
+    console.log(paper_data);
+    for (let i = 0; i < paper_data['papers'].length; i++){
+        console.log(paper_data['papers'][i]);
+        let paper = paper_data['papers'][i];
+        let paperName = paper["name"];
+        let paperId = paper["id"];
+        let paperParent = paper["parent"];
+        let paperElement = document.createElement("div");
+        paperElement.classList.add("paper");
+        paperElement.setAttribute("id", paperId);
+        paperElement.setAttribute("parent", paperParent);
+        paperElement.setAttribute("onclick", "paperClicked(this)");
+        paperElement.innerHTML = paperName;
+        document.querySelector(".paper-list").appendChild(paperElement);
+    }
+}
+</script>
+{% endblock %}
