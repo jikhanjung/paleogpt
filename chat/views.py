@@ -33,7 +33,7 @@ def chat_index(request):
     if user_obj is None:
         return render(request, 'chat/chat_index.html', {'user_obj': user_obj})
     zotero_user_id = user_obj.zotero_user_id
-    print("zotero user id:", zotero_user_id, 'username:', user_obj.username)
+    #print("zotero user id:", zotero_user_id, 'username:', user_obj.username)
     #zotero_api_key = user_obj.zotero_api_key
     #z = ZWrapper(zotero_user_id, zotero_api_key)
     collection_list = CollectionCache.objects.filter(zotero_user_id=zotero_user_id)
@@ -81,21 +81,22 @@ def item_list(request, colkey):
     user_obj = get_user_obj( request )
     zotero_user_id = user_obj.zotero_user_id
     # get items from database using CollectionItemRel
-    print("colkey:", colkey)
+    #print("colkey:", colkey)
     item_list = []
     for itemrel in CollectionItemRel.objects.filter(collection__key=colkey):
-        print(itemrel)
+        #print(itemrel)
         item_list.append({'key': itemrel.item.key, 'parent_key': itemrel.item.parent_id, 'name': json.loads(itemrel.item.data)['title'], 'children': []})
 
-    item_tree = {}
+    #item_tree = {}
+    item_tree = {'key': 'root', 'parent_key': None, 'name': 'root', 'children': []}
     for item in item_list:        
         if item['parent_key'] is None:
-            item_tree[item['key']] = item
+            item_tree['children'].append(item)
         else:
             for item2 in item_list:
                 if item2['key'] == item['parent_key']:
                     item2['children'].append(item)
-    print(item_tree)
+    #print(item_tree)
     # dump item tree to json
     #item_tree_json = json.dumps(item_tree)
     #print(item_tree_json)

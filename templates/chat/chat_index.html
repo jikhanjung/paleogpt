@@ -1,29 +1,49 @@
 <!-- templates/chat/chat_index.html -->
 {% extends "base.html" %}
 
-{% block title %}Log In{% endblock %}
+{% block title %}PaleoGPT{% endblock %}
 
 {% block content %}
-<h2>Chat Index</h2>
+<h2>PaleoGPT</h2>
 <h4>{{userobj.username}}</h4>
 <div class="container">
-    <div class="folder-section">
-        <!-- Tree-like structure for folders -->
-        <div class="folder-tree">
-            <!-- Dynamically populated folder tree -->
+    <div class="row">
+        <!-- Folder Section - Top Left -->
+        <div class="col-md-4">
+            <div class="folder-section">
+                <!-- Tree-like structure for folders -->
+                <div class="folder-tree">
+                    <!-- Dynamically populated folder tree -->
+                </div>
+            </div>
         </div>
-        <div class="paper-list">
-            <!-- Dynamically populated list of papers -->
+
+        <!-- Paper List - Top Right -->
+        <div class="col-md-8">
+            <div class="paper-list">
+                <!-- Dynamically populated list of papers -->
+            </div>
         </div>
     </div>
-    <div class="chat-section">
-        <!-- Chat UI -->
-        <div id="chatDisplay"></div>
-        <input type="text" id="messageInput">
-        <button onclick="sendMessage()">Send</button>
+
+    <!-- Chat Section - Bottom -->
+    <div class="row">
+        <div class="col-12">
+            <div class="dialog-section">
+            </div>
     </div>
-    {% if user_obj %}<a href="{% url 'logout_view' %}">로그아웃</a>{% else %}<a href="{% url 'login' %}">로그인</a>{% endif %}
-</div>
+    <div class="row">
+        <div class="col-12">
+            <div class="chat-section">
+                <!-- Chat UI -->
+                <div id="chatDisplay"></div>
+                <input type="text" id="messageInput">
+                <button onclick="sendMessage()">Send</button>
+                {% if user_obj %}<a href="{% url 'logout_view' %}">로그아웃</a>{% else %}<a href="{% url 'login' %}">로그인</a>{% endif %}
+            </div>
+        </div>
+    </div>
+</div>  
 <script>
 if(window.attachEvent) {
     window.attachEvent('onload', on_load_function);
@@ -69,36 +89,73 @@ function on_load_function(){
         updateTree(data);
     });
 }
-function updateTree(tree_data){
-    console.log(tree_data);
+function updateTree(tree_data, parentElement= document.querySelector(".folder-tree")){
+
+    //console.log(tree_data);
+
     for (let i = 0; i < tree_data['children'].length; i++){
-        console.log(tree_data['children'][i]);
+        //console.log(tree_data['children'][i]);
         let folder = tree_data['children'][i];
         let folderName = folder["name"];
         let folderId = folder["key"];
-        let folderParent = folder["parent"];
+        let folderParent = folder["parent_key"];
         let folderChildren = folder["children"];
         let folderElement = document.createElement("div");
         folderElement.classList.add("folder");
         folderElement.setAttribute("id", folderId);
-        folderElement.setAttribute("parent", folderParent);
-        folderElement.setAttribute("onclick", "folderClicked(this)");
-        folderElement.innerHTML = folderName;
-        document.querySelector(".folder-tree").appendChild(folderElement);
+        folderElement.setAttribute("class", "node");
+        folderElement.setAttribute("parent_key", folderParent);
+        let oddeven = "odd-row";
+        if( i % 2 == 0 )
+            oddeven = "even-row";
+        folderElement.classList.add(oddeven);
+        if (folderParent == null){
+            folderElement.setAttribute("style", "display: block;");
+        } else {
+            folderElement.setAttribute("style", "display: none;");
+        }
+        //folderElement.setAttribute("onclick", "folderClicked(this)");
+        folderElement.addEventListener('click', function(event) {folderClicked(this, event);});
+        folderElement.innerHTML = folderName; // + " (" + folderId + ")";
+        parentElement.appendChild(folderElement);
         if (folderChildren.length > 0){
-            updateTree(folder);
+            updateTree(folder, folderElement);
         }
     }
 }
-function folderClicked(folder){
+function folderClicked(folder,event){
+    event.stopPropagation();
     // get folder id from folder element
     let folderId = folder.getAttribute("id");
+    console.log("clicked:",folderId);
     // get folder name from folder element
     let folderName = folder.innerHTML;
     // get folder parent from folder element
     let folderParent = folder.getAttribute("parent");
     // get folder children from folder element
     let folderChildren = folder.getAttribute("children");
+    // get child elements of folder element
+    let folderChildElements = folder.children;
+    // show or hide child elements of folder element
+    for (let i = 0; i < folderChildElements.length; i++){
+        if (folderChildElements[i].style.display == "none"){
+            folderChildElements[i].style.display = "block";
+        } else {
+            folderChildElements[i].style.display = "none";
+        }
+    }
+
+    // Remove the highlighting from all divs
+    document.querySelectorAll('.node').forEach(div => {
+        //console.log(div.innerHTML, div.classList);
+        div.classList.remove('highlighted');
+        //console.log(div.innerHTML, div.classList);
+    });
+
+    // Highlight the clicked div
+    folder.classList.add('highlighted');
+    //console.log(folder.innerHTML, folder.classList);
+
     // get folder papers from server /chat/folder_papers via ajax
     fetch("/chat/item_list/"+folderId, {
         method: "GET",
@@ -113,16 +170,21 @@ function folderClicked(folder){
     });
 }
 function updatePaperList(paper_data){
-    console.log(paper_data);
-    for (let i = 0; i < paper_data['papers'].length; i++){
-        console.log(paper_data['papers'][i]);
-        let paper = paper_data['papers'][i];
+    //console.log(paper_data);
+    document.querySelector(".paper-list").innerHTML = "";
+    for (let i = 0; i < paper_data['children'].length; i++){
+        //console.log(paper_data['children'][i]);
+        let bgcolor = "#ffffff";
+        if( i % 2 == 0 )
+            bgcolor = "#f0f0f0";
+        let paper = paper_data['children'][i];
         let paperName = paper["name"];
         let paperId = paper["id"];
         let paperParent = paper["parent"];
         let paperElement = document.createElement("div");
         paperElement.classList.add("paper");
         paperElement.setAttribute("id", paperId);
+        paperElement.setAttribute("style", "background-color: "+bgcolor+";");
         paperElement.setAttribute("parent", paperParent);
         paperElement.setAttribute("onclick", "paperClicked(this)");
         paperElement.innerHTML = paperName;

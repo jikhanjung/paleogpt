@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "chat.apps.ChatConfig",
     "accounts.apps.AccountsConfig",
+    'django_bootstrap5',
 ]
 
 MIDDLEWARE = [
