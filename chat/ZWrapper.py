@@ -23,7 +23,7 @@ class ZWrapper():
         for collection in collection_list:
             key = collection['data']['key']
             print("collection:", key, collection['data'])
-            colcache = CollectionCache.objects.get_or_create(key=key)[0]
+            colcache = CollectionCache.objects.get_or_create(key=key,zotero_user_id=self.zotero_user_id)[0]
             print("  colcache:", colcache.key, colcache.version, collection['data']['version'])
             if colcache.version < prev_max_version:
                 colcache.zotero_user_id = self.zotero_user_id
@@ -33,7 +33,7 @@ class ZWrapper():
                     new_max_version = colcache.version
                     print("new_max_version - collection:", new_max_version)
                 if 'parentCollection' in collection['data'] and collection['data']['parentCollection'] != False:
-                    parent_colcache = CollectionCache.objects.get_or_create(key=collection['data']['parentCollection'])[0]
+                    parent_colcache = CollectionCache.objects.get_or_create(key=collection['data']['parentCollection'],zotero_user_id=self.zotero_user_id)[0]
                     parent_colcache.zotero_user_id = self.zotero_user_id
                     parent_colcache.save()
                     colcache.parent = parent_colcache
@@ -44,7 +44,7 @@ class ZWrapper():
         for item in items_list:
             item_key = item['data']['key']
             print("  item:", item_key)
-            itemcache = ItemCache.objects.get_or_create(key=item_key)[0]
+            itemcache = ItemCache.objects.get_or_create(key=item_key,zotero_user_id=self.zotero_user_id)[0]
             if itemcache.version < prev_max_version:
                 itemcache.zotero_user_id = self.zotero_user_id
                 itemcache.data = json.dumps(item['data'])
@@ -54,7 +54,7 @@ class ZWrapper():
                     print("new_max_version - item:", new_max_version)
                     
                 if 'parentItem' in item['data'] and item['data']['parentItem'] != False:
-                    parent_itemcache = ItemCache.objects.get_or_create(key=item['data']['parentItem'])[0]
+                    parent_itemcache = ItemCache.objects.get_or_create(key=item['data']['parentItem'],zotero_user_id=self.zotero_user_id)[0]
                     if( parent_itemcache.version == 0 ):
                         parent_item = self.zot.item(item['data']['parentItem'])
                         parent_itemcache.zotero_user_id = self.zotero_user_id
@@ -67,7 +67,8 @@ class ZWrapper():
                         parent_itemcache.save()
                     itemcache.parent = parent_itemcache
                 itemcache.save()
-                colitemrel = CollectionItemRel.objects.select().where(CollectionItemRel.item==itemcache)
+                colitemrel = CollectionItemRel.objects.filter(item=itemcache,zotero_user_id=self.zotero_user_id)
+                #CollectionItemRel.objects.select().where(CollectionItemRel.item==itemcache)
                 prev_colkey_list = [ col.collection.key for col in colitemrel ]
                 #prev_colkey_list = [ col.key for col in  ]
 
@@ -77,17 +78,17 @@ class ZWrapper():
                     for collection_key in collection_list:
                         if collection_key in prev_colkey_list:
                             prev_colkey_list.remove(collection_key)
-                        colcache = CollectionCache.objects.get_or_create(key=collection_key)[0]
-                        colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache)[0]
+                        colcache = CollectionCache.objects.get_or_create(key=collection_key,zotero_user_id=self.zotero_user_id)[0]
+                        colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache,zotero_user_id=self.zotero_user_id)[0]
                         colitemrel.zotero_user_id = self.zotero_user_id
                         colitemrel.save()
                         if itemcache.parent:
-                            parent_colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache.parent)[0]
+                            parent_colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache.parent,zotero_user_id=self.zotero_user_id)[0]
                             parent_colitemrel.zotero_user_id = self.zotero_user_id
                             parent_colitemrel.save()
                 for colkey in prev_colkey_list:
-                    colcache = CollectionCache.objects.get_or_create(key=colkey)[0]
-                    colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache)[0]
+                    colcache = CollectionCache.objects.get_or_create(key=colkey,zotero_user_id=self.zotero_user_id)[0]
+                    colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache,zotero_user_id=self.zotero_user_id)[0]
                     colitemrel.zotero_user_id = self.zotero_user_id
                     colitemrel.delete_instance()
         print("new_max_version:", new_max_version)
@@ -105,14 +106,14 @@ class ZWrapper():
         for collection in self._collection_list:
             key = collection['data']['key']
             print("collection:", key, collection['data'])
-            colcache = CollectionCache.objects.get_or_create(key=key)[0]
+            colcache = CollectionCache.objects.get_or_create(key=key,zotero_user_id=self.zotero_user_id)[0]
             colcache.zotero_user_id = self.zotero_user_id
             colcache.data = json.dumps(collection['data'])
             colcache.version = int(collection['data']['version'])
             if colcache.version > max_version:
                 max_version = colcache.version
             if 'parentCollection' in collection['data'] and collection['data']['parentCollection'] != False:
-                parent_colcache = CollectionCache.objects.get_or_create(key=collection['data']['parentCollection'])[0]
+                parent_colcache = CollectionCache.objects.get_or_create(key=collection['data']['parentCollection'],zotero_user_id=self.zotero_user_id)[0]
                 parent_colcache.zotero_user_id = self.zotero_user_id
                 parent_colcache.save()
                 colcache.parent = parent_colcache
@@ -124,7 +125,7 @@ class ZWrapper():
             for item in items_list:
                 item_key = item['data']['key']
                 print("  item:", item_key)
-                itemcache = ItemCache.objects.get_or_create(key=item_key)[0]
+                itemcache = ItemCache.objects.get_or_create(key=item_key,zotero_user_id=self.zotero_user_id)[0]
                 print("    itemcache:", itemcache.key, itemcache.version, item['data']['version'])
                 itemcache.zotero_user_id = self.zotero_user_id
                 itemcache.data = json.dumps(item['data'])
@@ -135,25 +136,25 @@ class ZWrapper():
                     max_item_version = itemcache.version
                 #itemcache.collection = colcache
                 if 'parentItem' in item['data'] and item['data']['parentItem'] != False:
-                    parent_itemcache = ItemCache.objects.get_or_create(key=item['data']['parentItem'])[0]
+                    parent_itemcache = ItemCache.objects.get_or_create(key=item['data']['parentItem'],zotero_user_id=self.zotero_user_id)[0]
                     if( parent_itemcache.version == 0 ):
                         parent_item = self.zot.item(item['data']['parentItem'])
                         parent_itemcache.data = json.dumps(parent_item['data'])
                         parent_itemcache.version = int(parent_item['data']['version'])
                         parent_itemcache.zotero_user_id = self.zotero_user_id
                         parent_itemcache.save()
-                        parent_colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=parent_itemcache)[0]
+                        parent_colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=parent_itemcache,zotero_user_id=self.zotero_user_id)[0]
                         parent_colitemrel.save()
                     print("    parent_itemcache:", parent_itemcache.key, parent_itemcache.version, item['data']['version'])
                     itemcache.parent = parent_itemcache
                 print("    itemcache:", itemcache.key, itemcache.version, item['data']['version'])
                 itemcache.save()
-                colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache)[0]
+                colitemrel = CollectionItemRel.objects.get_or_create(collection=colcache,item=itemcache,zotero_user_id=self.zotero_user_id)[0]
                 colitemrel.zotero_user_id = self.zotero_user_id
                 colitemrel.save()
             colcache.max_item_version = max_item_version
             colcache.save()
-            last_version = LastVersion.objects.get_or_create(id=1)[0]
+            last_version = LastVersion.objects.get_or_create(zotero_user_id=self.zotero_user_id)[0]
             last_version.version = max_version
             last_version.save()
 

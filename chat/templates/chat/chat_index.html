@@ -1,13 +1,13 @@
 <!-- templates/chat/chat_index.html -->
-{% extends "base.html" %}
+{% extends "chatbase.html" %}
 
 {% block title %}PaleoGPT{% endblock %}
 
 {% block content %}
 <h2>PaleoGPT</h2>
 <h4>{{userobj.username}}</h4>
-<div class="container">
-    <div class="row">
+<div class="container d-flex flex-column vh-90">
+    <div class="row top py-3">
         <!-- Folder Section - Top Left -->
         <div class="col-md-4">
             <div class="folder-section">
@@ -27,19 +27,17 @@
     </div>
 
     <!-- Chat Section - Bottom -->
-    <div class="row">
+    <div class="row flex-grow-1 overflow-auto">
         <div class="col-12">
             <div class="dialog-section">
             </div>
+        </div>
     </div>
-    <div class="row">
-        <div class="col-12">
+    <div class="row py-3">
+        <div>
             <div class="chat-section">
                 <!-- Chat UI -->
-                <div id="chatDisplay"></div>
-                <input type="text" id="messageInput">
-                <button onclick="sendMessage()">Send</button>
-                {% if user_obj %}<a href="{% url 'logout_view' %}">로그아웃</a>{% else %}<a href="{% url 'login' %}">로그인</a>{% endif %}
+                <table class="table"><tr><td><textarea rows="3" id="messageInput" class="col-12"></textarea></td><td><button onclick="sendMessage()">Send</button></td></tr></table>
             </div>
         </div>
     </div>
@@ -101,6 +99,9 @@ function updateTree(tree_data, parentElement= document.querySelector(".folder-tr
         let folderParent = folder["parent_key"];
         let folderChildren = folder["children"];
         let folderElement = document.createElement("div");
+        let folderElementEnvelope = document.createElement("div");
+        folderElementEnvelope.setAttribute("class", "node-envelope");
+        folderElementEnvelope.appendChild(folderElement);
         folderElement.classList.add("folder");
         folderElement.setAttribute("id", folderId);
         folderElement.setAttribute("class", "node");
@@ -117,9 +118,9 @@ function updateTree(tree_data, parentElement= document.querySelector(".folder-tr
         //folderElement.setAttribute("onclick", "folderClicked(this)");
         folderElement.addEventListener('click', function(event) {folderClicked(this, event);});
         folderElement.innerHTML = folderName; // + " (" + folderId + ")";
-        parentElement.appendChild(folderElement);
+        parentElement.appendChild(folderElementEnvelope);
         if (folderChildren.length > 0){
-            updateTree(folder, folderElement);
+            updateTree(folder, folderElementEnvelope);
         }
     }
 }
@@ -127,7 +128,7 @@ function folderClicked(folder,event){
     event.stopPropagation();
     // get folder id from folder element
     let folderId = folder.getAttribute("id");
-    console.log("clicked:",folderId);
+    //console.log("clicked:",folderId);
     // get folder name from folder element
     let folderName = folder.innerHTML;
     // get folder parent from folder element
@@ -135,13 +136,15 @@ function folderClicked(folder,event){
     // get folder children from folder element
     let folderChildren = folder.getAttribute("children");
     // get child elements of folder element
-    let folderChildElements = folder.children;
+    let folderChildElements = folder.parentElement.children;
     // show or hide child elements of folder element
-    for (let i = 0; i < folderChildElements.length; i++){
-        if (folderChildElements[i].style.display == "none"){
-            folderChildElements[i].style.display = "block";
+    //console.log(folder.parentElement.children);
+    for (let i = 1; i < folderChildElements.length; i++){
+        //console.log(folderChildElements[i]);
+        if (folderChildElements[i].children[0].style.display == "none"){
+            folderChildElements[i].children[0].style.display = "block";
         } else {
-            folderChildElements[i].style.display = "none";
+            folderChildElements[i].children[0].style.display = "none";
         }
     }
 
@@ -179,17 +182,37 @@ function updatePaperList(paper_data){
             bgcolor = "#f0f0f0";
         let paper = paper_data['children'][i];
         let paperName = paper["name"];
-        let paperId = paper["id"];
+        let paperId = paper["key"];
         let paperParent = paper["parent"];
         let paperElement = document.createElement("div");
+        let paperChildren = paper.children;
         paperElement.classList.add("paper");
         paperElement.setAttribute("id", paperId);
-        paperElement.setAttribute("style", "background-color: "+bgcolor+";");
+        let oddeven = "odd-row";
+        if( i % 2 == 0 )
+            oddeven = "even-row";
+        paperElement.classList.add(oddeven);
         paperElement.setAttribute("parent", paperParent);
         paperElement.setAttribute("onclick", "paperClicked(this)");
         paperElement.innerHTML = paperName;
+        for( j = 0 ; j < paperChildren.length ; j++ ) {
+            //console.log(paperChildren[j]["key"],paperChildren[j]["itemType"], paperChildren[j]["name"]);
+            if( paperChildren[j]["itemType"] == "attachment" && paperChildren[j]["contentType"] == "application/pdf") {
+                paperElement.innerHTML += " <a href='/chat/download/"+paperChildren[j]["key"]+"'>PDF</a><br>";
+            }
+        }
         document.querySelector(".paper-list").appendChild(paperElement);
     }
+}
+
+function paperClicked(paper){
+    //console.log("clicked:",paper.innerHTML)
+    paperId = paper.getAttribute("id");
+    paper_list = document.querySelector(".paper-list").children;
+    for( i = 0 ; i < paper_list.length ; i++ ) {
+        paper_list[i].classList.remove("highlighted");
+    }
+    paper.classList.add("highlighted");
 }
 </script>
 {% endblock %}
