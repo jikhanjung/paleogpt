@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from .ZWrapper import ZWrapper
 from .models import CollectionCache, ItemCache, CollectionItemRel, LastVersion
-import json
+import json, os
 import requests
 
 # disable ssl warning
@@ -92,7 +92,7 @@ def item_list(request, colkey):
     for itemrel in CollectionItemRel.objects.filter(collection__key=colkey,zotero_user_id=zotero_user_id):
         #print(itemrel)
         data = json.loads(itemrel.item.data)
-        item_list.append({'key': itemrel.item.key, 'parent_key': itemrel.item.parent_id, 'name': data['title'], 'itemType': data['itemType'], 'children': []})
+        item_list.append({'key': itemrel.item.key, 'parent_key': itemrel.item.parent_id, 'name': data['title'], 'itemType': data['itemType'], 'data': data, 'children': []})
         if 'contentType' in data:
             item_list[-1]['contentType'] = data['contentType']
 
@@ -104,4 +104,38 @@ def item_list(request, colkey):
             for item2 in item_list:
                 if item2['key'] == item['parent_key']:
                     item2['children'].append(item)
+            '''
+            '''
+
     return JsonResponse(item_tree)
+
+def item_check(request, itemkey):
+    user_obj = get_user_obj( request )
+    zotero_user_id = user_obj.zotero_user_id
+    print("item_check:", itemkey, zotero_user_id, user_obj.zotero_api_key)
+    z = ZWrapper(zotero_user_id, user_obj.zotero_api_key)
+
+    item = ItemCache.objects.filter(key=itemkey,zotero_user_id=zotero_user_id)
+    if len(item) == 0:
+        return JsonResponse({'status': 'not found'})
+    else:
+
+        data = json.loads(item[0].data)
+        children = item[0].children.all()
+        if len(children) > 0:
+            for child in children:
+                data = json.loads(child.data)
+                print(data['key'])
+                if 'contentType' in data and data['contentType'] == 'application/pdf':
+                    print(data['key'],data['filename'],data['contentType'])
+                    print("pdf file found", data['filename'])
+                    filepath = './pdfs/' + data['filename']
+                    if not os.path.exists(filepath):
+                        z.dump(data['key'],data['filename'],'./pdfs/')
+                    print("saved:", data['key'])
+                else:
+                    print("no file")
+
+
+
+        return JsonResponse({'status': 'found'})

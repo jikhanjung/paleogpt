@@ -213,6 +213,18 @@ function paperClicked(paper){
         paper_list[i].classList.remove("highlighted");
     }
     paper.classList.add("highlighted");
+    // /chat/item_check/<item_id>
+    fetch("/chat/item_check/"+paperId, {
+        method: "GET",
+        headers: {
+            "X-CSRFToken": getCookie("csrftoken"), // Handle CSRF token
+            "Content-Type": "application/json"
+        },
+    }).then(response => response.json())
+    .then(data => {
+        console.log(data);
+        //updateDialog(data);
+    });
 }
 </script>
 {% endblock %}
